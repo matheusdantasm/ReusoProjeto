@@ -1,16 +1,20 @@
 package br.com.nogueiranogueira.aularefatoracao.solidproject.repository;
 
 import br.com.nogueiranogueira.aularefatoracao.solidproject.model.Usuario;
-import org.springframework.beans.factory.annotation.Autowired;
+import br.com.nogueiranogueira.aularefatoracao.solidproject.model.UsuarioVIP;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
 public class GerenciadorUsuarioRepositoryImpl implements GerenciadorUsuarioRepository {
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+    private final UsuarioRepository usuarioRepository;
+
+    public GerenciadorUsuarioRepositoryImpl(UsuarioRepository usuarioRepository) {
+        this.usuarioRepository = usuarioRepository;
+    }
 
     @Override
     public Usuario salvar(Usuario usuario) {
@@ -23,7 +27,7 @@ public class GerenciadorUsuarioRepositoryImpl implements GerenciadorUsuarioRepos
     }
 
     @Override
-    public java.util.List<Usuario> buscarTodos() {
+    public List<Usuario> buscarTodos() {
         return usuarioRepository.findAll();
     }
 
@@ -33,20 +37,27 @@ public class GerenciadorUsuarioRepositoryImpl implements GerenciadorUsuarioRepos
     }
 
     @Override
-    public java.util.List<Usuario> buscarPorFiltroAvançados(String nome, String email, String tipoUsuario) {
-        // Implementação de busca avançada usando critérios específicos
-        throw  new UnsupportedOperationException("Not supported yet.");
+    public List<Usuario> buscarPorFiltroAvançados(String nome, String email, String tipoUsuario) {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public long contarUsuariosPorTipo(String tipoUsuario) {
-        // Implementação de contagem de usuários por tipo
-        return usuarioRepository.countByTipo(tipoUsuario);
+
+        if ("VIP".equalsIgnoreCase(tipoUsuario)) {
+            return usuarioRepository.countByClass(UsuarioVIP.class);
+        }
+
+        if ("COMUM".equalsIgnoreCase(tipoUsuario)) {
+            return usuarioRepository.countByClass(Usuario.class)
+                    - usuarioRepository.countByClass(UsuarioVIP.class);
+        }
+
+        throw new IllegalArgumentException("Tipo inválido");
     }
 
     @Override
-    public java.util.List<Object[]> gerarRelatorioUsuariosPorTipo() {
-        // Implementação de geração de relatório de usuários por tipo
+    public List<Object[]> gerarRelatorioUsuariosPorTipo() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 }

@@ -1,49 +1,53 @@
 package br.com.nogueiranogueira.aularefatoracao.solidproject.service;
 
 import br.com.nogueiranogueira.aularefatoracao.solidproject.dto.UsuarioDTO;
+import br.com.nogueiranogueira.aularefatoracao.solidproject.model.TipoUsuario;
 import br.com.nogueiranogueira.aularefatoracao.solidproject.model.Usuario;
 import br.com.nogueiranogueira.aularefatoracao.solidproject.repository.UsuarioRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import br.com.nogueiranogueira.aularefatoracao.solidproject.strategy.CriacaoUsuarioStrategy;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class GerenciadorUsuarioService {
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final Map<TipoUsuario, CriacaoUsuarioStrategy> strategies;
+
+    public GerenciadorUsuarioService(
+            UsuarioRepository usuarioRepository,
+            List<CriacaoUsuarioStrategy> strategyList) {
+
+        this.usuarioRepository = usuarioRepository;
+
+        this.strategies = strategyList.stream()
+                .collect(Collectors.toMap(
+                        CriacaoUsuarioStrategy::getTipo,
+                        strategy -> strategy
+                ));
+    }
 
     public Usuario criarUsuario(UsuarioDTO dto) {
-        String tipo = dto.tipo();
 
-        if ("COMUM".equals(tipo)) {
-            // Regras para usuário comum
-            validarEmail(dto.email());
-            Usuario usuario = new Usuario(dto.nome(), dto.email(), dto.tipo());
-            usuario.setPontos(0);
-            return usuarioRepository.save(usuario);
+        TipoUsuario tipo;
 
-        } else if ("VIP".equals(tipo)) {
-            // Regras para usuário VIP
-            validarEmail(dto.email());
-            validarIdade(dto.idade());
-            Usuario usuario = new Usuario(dto.nome(), dto.email(), dto.tipo());
-            usuario.setPontos(100);
-            return usuarioRepository.save(usuario);
-
-        } else {
+        try {
+            tipo = TipoUsuario.valueOf(dto.tipo());
+        } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Tipo inválido");
         }
-    }
 
-    private void validarEmail(String email) {
-        if (email == null || !email.contains("@")) {
-            throw new IllegalArgumentException("E-mail inválido");
-        }
-    }
+        CriacaoUsuarioStrategy strategy = strategies.get(tipo);
 
-    private void validarIdade(int idade){
-        if (idade < 18) {
-            throw new IllegalArgumentException("Usuário deve ser maior de idade");
+        if (strategy == null) {
+            throw new IllegalArgumentException("Tipo inválido");
         }
+
+        Usuario usuario = strategy.criar(dto);
+
+        return usuarioRepository.save(usuario);
     }
 }
